@@ -42,7 +42,10 @@ Core Functionalities :
             Download task exports
 
 Technologies : 
-    backend : fastAPI with python 3.13.3 , pydantic , sqlalchemy , JWT
-    database : postgreSQL
-    frontend : not completed
+
+    backend :- fastAPI with python 3.13.3 , pydantic , sqlalchemy , JWT
+
+    database :- postgreSQL
+
+    frontend :- not completed
 
