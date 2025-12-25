@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mock Project Manager</title>
+</head>
+<script>
+    const API_BASE = "http://localhost:8000";
+    let accessToken = null;
+    
+    /* =========================
+       AUTH
+    ========================= */
+    
+    async function login(username, password) {
+        const res = await fetch(`${API_BASE}/auth/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password })
+        });
+    
+        if (!res.ok) {
+            alert("Login failed");
+            return;
+        }
+    
+        const data = await res.json();
+        accessToken = data.access_token;
+        alert("Logged in!");
+    }
+
+    async function register(username, email, password) {
+        const res = await fetch(`${API_BASE}/auth/signup`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, email, password })
+        });
+
+        if (!res.ok) {
+            const data = await res.json();
+            alert(`Registration failed: ${data.detail || res.statusText}`);
+            return;
+        }
+
+        alert("Account created! You can now log in.");
+    }
+
+    
+    /* =========================
+       PROJECTS
+    ========================= */
+    
+    async function createProject(name, description) {
+        const res = await fetch(`${API_BASE}/projects/create`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({ name, description })
+        });
+    
+        if (!res.ok) {
+            alert("Failed to create project");
+            return;
+        }
+    
+        loadProjects();
+    }
+    
+    async function loadProjects() {
+        const res = await fetch(`${API_BASE}/projects/list`, {
+            headers: {
+                "Authorization": `Bearer ${accessToken}`
+            }
+        });
+    
+        const projects = await res.json();
+        renderProjects(projects);
+    }
+    
+    async function updateProjectStatus(projectId, status) {
+        await fetch(`${API_BASE}/projects/${projectId}/status`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({ status })
+        });
+    
+        loadProjects();
+    }
+    
+    /* =========================
+       UI RENDERING
+    ========================= */
+    
+    function renderProjects(projects) {
+        const ul = document.querySelector("#project-list ul");
+        ul.innerHTML = "";
+    
+        projects.forEach(p => {
+            const li = document.createElement("li");
+    
+            li.innerHTML = `
+                <strong>${p.name}</strong><br>
+                <small>${p.description}</small><br>
+                <small>Status: ${p.status}</small><br>
+    
+                <select onchange="updateProjectStatus(${p.id}, this.value)">
+                    <option value="ongoing" ${p.status === "ongoing" ? "selected" : ""}>ongoing</option>
+                    <option value="paused" ${p.status === "paused" ? "selected" : ""}>paused</option>
+                    <option value="ended" ${p.status === "ended" ? "selected" : ""}>ended</option>
+                </select>
+            `;
+    
+            ul.appendChild(li);
+        });
+    }
+    </script>
+    
+<body>
+
+<!-- HEADER -->
+<header>
+    <h1>Mock Project Manager</h1>
+    <p>Project & Task Management System</p>
+
+    <!-- AUTH STATUS -->
+    <div id="auth-status">
+        <span>Status: Not Logged In</span>
+        <button>Logout</button>
+    </div>
+</header>
+
+<hr>
+
+<!-- AUTH SECTION -->
+<section id="auth">
+    <h2>Authentication</h2>
+
+    <!-- LOGIN -->
+    <div id="login">
+        <h3>Login</h3>
+        <form onsubmit="event.preventDefault(); login(this[0].value, this[1].value)">
+
+            <input type="text" placeholder="Username or Email" required />
+            <input type="password" placeholder="Password" required />
+            <button type="submit">Login</button>
+        </form>
+    </div>
+
+    <br>
+
+    <!-- SIGN UP -->
+    <div id="signup">
+        <h3>Sign Up</h3>
+        <form id="signup-form">
+            <input type="text" placeholder="Username" id="signup-username" />
+            <input type="email" placeholder="Email" id="signup-email" />
+            <input type="password" placeholder="Password" id="signup-password" />
+            <button type="submit">Create Account</button>
+        </form>
+        
+        <script>
+        document.querySelector("#signup-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const username = document.querySelector("#signup-username").value;
+            const email = document.querySelector("#signup-email").value;
+            const password = document.querySelector("#signup-password").value;
+            await register(username, email, password);
+        });
+        </script>
+        
+    </div>
+</section>
+
+<hr>
+
+<!-- DASHBOARD OVERVIEW (REPORTS OVERVIEW API) -->
+<section id="dashboard">
+    <h2>User Overview</h2>
+
+    <ul>
+        <li>Total Projects: <strong>0</strong></li>
+        <li>Total Tasks: <strong>0</strong></li>
+        <li>Completed Tasks: <strong>0</strong></li>
+    </ul>
+</section>
+
+<hr>
+
+<!-- PROJECT SECTION -->
+<!-- PROJECT SECTION -->
+<section id="projects">
+    <h2>Projects</h2>
+
+    <!-- Create Project -->
+    <div id="create-project">
+        <h3>Create Project</h3>
+        <form onsubmit="event.preventDefault(); createProject(this[0].value, this[1].value)">
+
+            <input type="text" placeholder="Project Name" />
+            <input type="text" placeholder="Description" />
+            <button type="submit">Create Project</button>
+        </form>
+    </div>
+
+    <hr>
+
+    <!-- Search Project -->
+    <div id="search-project">
+        <h3>Search Project</h3>
+        <input type="text" placeholder="Search by project name" />
+        <button>Search</button>
+    </div>
+
+    <hr>
+
+    <!-- Project List -->
+    <div id="project-list">
+        <h3>Project List</h3>
+
+        <ul>
+            <!-- Example project item -->
+            <li>
+                <strong>Project Alpha</strong><br>
+                <small>Description: Demo project</small><br>
+                <small>Status: ongoing</small>
+
+                <div style="margin-top: 8px;">
+                    <label>Change Status:</label>
+                    <select>
+                        <option value="ongoing">ongoing</option>
+                        <option value="paused">paused</option>
+                        <option value="ended">ended</option>
+                    </select>
+
+                    <button>Update Status</button>
+                </div>
+            </li>
+        </ul>
+    </div>
+</section>
+
+
+
+<hr>
+
+<!-- TASK SECTION -->
+<section id="tasks">
+    <h2>Tasks</h2>
+
+    <!-- Create Task -->
+    <div id="create-task">
+        <h3>Create Task</h3>
+        <form>
+            <select required>
+                <option value="">Select Project</option>
+                <!-- project options from backend -->
+            </select>
+
+            <input type="text" placeholder="Task Title" required />
+            <input type="text" placeholder="Task Description" />
+
+            <select required>
+                <option value="TODO">TODO</option>
+                <option value="IN_PROGRESS">IN_PROGRESS</option>
+                <option value="DONE">DONE</option>
+            </select>
+
+            <button type="submit">Create Task</button>
+        </form>
+    </div>
+
+    <!-- Task List -->
+    <div id="task-list">
+        <h3>Tasks for Selected Project</h3>
+        <ul>
+            <!-- Example -->
+            <!-- <li>[DONE] Implement Reports</li> -->
+        </ul>
+    </div>
+</section>
+
+<hr>
+
+<!-- SEARCH & FILTER -->
+<section id="search">
+    <h2>Search & Filter Tasks</h2>
+
+    <form>
+        <input type="text" placeholder="Search by title" />
+        <select>
+            <option value="">All Status</option>
+            <option value="TODO">TODO</option>
+            <option value="IN_PROGRESS">IN_PROGRESS</option>
+            <option value="DONE">DONE</option>
+        </select>
+        <button type="submit">Apply</button>
+    </form>
+</section>
+
+<hr>
+
+<!-- REPORTS -->
+<section id="reports">
+    <h2>Reports</h2>
+
+    <!-- Project-wise Report -->
+    <div id="project-report">
+        <h3>Project Task Summary</h3>
+
+        <select>
+            <option value="">Select Project</option>
+        </select>
+
+        <button>Generate</button>
+
+        <ul>
+            <li>TODO: 0</li>
+            <li>IN_PROGRESS: 0</li>
+            <li>DONE: 0</li>
+        </ul>
+    </div>
+
+    <br>
+
+    <!-- Overall Task Status Report -->
+    <div id="status-report">
+        <h3>Overall Task Status</h3>
+
+        <ul>
+            <li>TODO: 0</li>
+            <li>IN_PROGRESS: 0</li>
+            <li>DONE: 0</li>
+        </ul>
+    </div>
+</section>
+
+<hr>
+
+<!-- FOOTER -->
+<footer>
+    <p>Mock Project Manager – Demo Application</p>
+</footer>
+
+</body>
+</html>
